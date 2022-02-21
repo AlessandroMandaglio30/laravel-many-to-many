@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use function GuzzleHttp\Promise\all;
 use App\Category;
-use CategoriesTableSeeder;
+use App\Tag;
 
 class PostsController extends Controller
 {
@@ -16,7 +16,8 @@ class PostsController extends Controller
         "title" => "required|string|max:120",
         "content" => "required",
         "published" => "sometimes|accepted",
-        "category_id" => "nullable|exists:categories,id"
+        "category_id" => "nullable|exists:categories,id",
+        "tags" => "nullable|exists:tags,id"
     ];
     /**
      * Display a listing of the resource.
@@ -39,7 +40,9 @@ class PostsController extends Controller
     {
         $categories = Category::all();
 
-        return view('admin.posts.create', compact("categories"));
+        $tags = Tag::all();
+
+        return view("admin.posts.create", compact("categories", "tags"));
     }
 
     /**
@@ -56,23 +59,18 @@ class PostsController extends Controller
         $data = $request->all();
 
         $newPost = new Post();
-        $newPost->title = $data["title"];
-        $newPost->content = $data["content"];
+        $newPost->fill($data);
+
         $newPost->published = isset($data["published"]);
-        $newPost->category_id = $data["category_id"];
 
-        $slug = Str::of($newPost->title)->slug("-");
-        $count = 1;
-
-        while (Post::where("slug", $slug)->first()) {
-            $slug = Str::of($newPost->title)->slug("-") . "-{$count}";
-            $count++;
-        }
-
-        $newPost->slug = $slug;
+        $newPost->slug = $this->getSlug($newPost->title);
 
         $newPost->save();
-        //redirect al post 
+
+        if (isset($data["tags"])) {
+            $newPost->tags()->sync($data["tags"]);
+        }
+
 
         return redirect()->route("posts.show", $newPost->id);
     }
@@ -100,8 +98,10 @@ class PostsController extends Controller
     public function edit(Post $post)
     {
         $categories = Category::all();
+        $tags = Tag::all();
 
-        return view("admin.posts.edit", compact("post", "categories"));
+
+        return view("admin.posts.edit", compact("post", "categories", "tags"));
     }
 
     /**
@@ -143,6 +143,10 @@ class PostsController extends Controller
 
         $post->save();
 
+        if (isset($data["tags"])) {
+            $post->tags()->sync($data["tags"]);
+        }
+
         return redirect()->route("posts.show", $post->id);
     }
 
@@ -157,5 +161,17 @@ class PostsController extends Controller
         $post->delete();
 
         return redirect()->route("posts.index");
+    }
+
+    private function getSlug($title)
+    {
+        $slug = Str::of($title)->slug("-");
+        $count = 1;
+
+        while (Post::where("slug", $slug)->first()) {
+            $slug = Str::of($title)->slug("-") . "-{$count}";
+            $count++;
+        }
+        return $slug;
     }
 }

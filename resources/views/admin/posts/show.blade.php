@@ -27,12 +27,21 @@
                             <span class="badge badge-secondary">Bozza</span>
                         @endif
                     </div>
-                     @if($post->category)
+                    @if($post->category)
                             <div class="mb-3" >
                                 <strong>Categoria:</strong>
                                 {{($post->category->name)}}
                             </div>
-                        @endif
+                    @endif
+                    @if(count($post->tags) > 0)
+                        <div class="mb-3">
+                            <strong>Tags:</strong>
+                            @foreach ($post->tags as $tag)
+                                <span class="badge badge-primary">{{$tag->name}}</span>
+                            @endforeach
+                        </div>
+                    @endif
+                    <strong>Descrizione:</strong>
                     {{$post->content}}
                 </div>
 
